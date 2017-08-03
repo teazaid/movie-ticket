@@ -3,36 +3,37 @@ package com.movie.ticket.http
 import akka.http.scaladsl.model.{HttpEntity, MediaTypes}
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.util.ByteString
-import com.movie.ticket.models.{CreateMovieRequest, ReserveRequest}
+import com.movie.ticket.models.{RegisterMovieRequest, ReserveSeatRequest}
 import com.movie.ticket.repositories.SqlMovieRepository
 import io.circe.generic.auto._
 import io.circe.syntax._
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
 
 /**
   * Created by Alexander on 02.08.2017.
   */
-class MovieRouteSpec extends WordSpec with Matchers with ScalatestRouteTest {
-  private val route = new MovieRoute(new SqlMovieRepository()).route
+class MovieRouteSpec extends WordSpec with Matchers with ScalatestRouteTest with BeforeAndAfterAll {
+  private val repository = new SqlMovieRepository()
+  private val route = new MovieRoute(repository).route
 
   private val ok = "ok"
 
   "MovieRoute" should {
     "register new movie" in {
-      val jsonRequest = ByteString(CreateMovieRequest("i17", 10, "m16", "movieTitle").asJson.noSpaces)
+      val registerRequest = ByteString(RegisterMovieRequest("i17", 10, "m16", "movieTitle").asJson.noSpaces)
 
       Post("/register",
-        HttpEntity(MediaTypes.`application/json`, jsonRequest)) ~> route ~> check {
+        HttpEntity(MediaTypes.`application/json`, registerRequest)) ~> route ~> check {
         status.intValue() shouldEqual 200
         responseAs[String] shouldEqual ok
       }
     }
 
     "reserve a seat" in {
-      val jsonRequest = ByteString(ReserveRequest("i17", "m16").asJson.noSpaces)
+      val reserveSeat = ByteString(ReserveSeatRequest("i17", "m16").asJson.noSpaces)
 
       Post("/reserve",
-        HttpEntity(MediaTypes.`application/json`, jsonRequest)) ~> route ~> check {
+        HttpEntity(MediaTypes.`application/json`, reserveSeat)) ~> route ~> check {
         status.intValue() shouldEqual 200
         responseAs[String] shouldEqual ok
       }
@@ -52,5 +53,9 @@ class MovieRouteSpec extends WordSpec with Matchers with ScalatestRouteTest {
         responseAs[String] shouldEqual "Couldn't find the movie"
       }
     }
+  }
+
+  override protected def afterAll(): Unit = {
+    repository.destroy()
   }
 }

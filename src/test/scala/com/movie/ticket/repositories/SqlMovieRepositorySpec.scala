@@ -1,6 +1,6 @@
 package com.movie.ticket.repositories
 
-import com.movie.ticket.models.{Movie, RepositoryInteractionStatus}
+import com.movie.ticket.models.{Movie, Status}
 import org.scalatest.{BeforeAndAfterAll, FunSpec}
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -11,56 +11,52 @@ import scala.concurrent.ExecutionContext.Implicits.global
   */
 class SqlMovieRepositorySpec extends FunSpec with BeforeAndAfterAll {
 
-  private val FirstMovie = Movie(imdbId = "imdbId",
+  private val NewMovie = Movie(imdbId = "imdbId",
     totalSeats = 100,
     reservedSeats = 0,
     screenId = "screenId",
     movieTitle = "movieTitle")
 
-  private val NoMoreReservationMovie = Movie(imdbId = "imdbId",
+  private val MovieNotAvailableForReservation = Movie(imdbId = "imdbId",
     totalSeats = 100,
     reservedSeats = 100,
     screenId = "screenId1",
     movieTitle = "movieTitle1")
 
   private val movieRepository = new SqlMovieRepository()
-
   private val Timeout = 1.second
 
   describe("MovieRepository") {
     it("should create a new movie and be able to read it") {
-      val createMovieResult = Await.result(movieRepository.create(FirstMovie), Timeout)
-      assert(createMovieResult == RepositoryInteractionStatus.Success)
+      val createdMovie = Await.result(movieRepository.create(NewMovie), Timeout)
+      assert(createdMovie == Status.Success)
 
-      val readMovieResult = Await.result(movieRepository.read(FirstMovie.imdbId, FirstMovie.screenId), Timeout)
+      val readMovieResult = Await.result(movieRepository.find(NewMovie.imdbId, NewMovie.screenId), Timeout)
       assert(readMovieResult.isDefined)
-      val res = readMovieResult.get
-      assert(res == FirstMovie.copy(id = res.id))
+      val result = readMovieResult.get
+      assert(result == NewMovie.copy(id = result.id))
     }
 
     it("should create a new movie which already exists") {
-      val createMovieResult = Await.result(movieRepository.create(FirstMovie), Timeout)
-      assert(createMovieResult == RepositoryInteractionStatus.Failure)
+      assert(Await.result(movieRepository.create(NewMovie), Timeout) == Status.Failure)
     }
 
-    it("should read un existing movie") {
-      val readMovieResult = Await.result(movieRepository.read(FirstMovie.imdbId + 1, FirstMovie.screenId), Timeout)
-      assert(readMovieResult.isEmpty)
+    it("should read non existing movie") {
+      assert(Await.result(movieRepository.find(NewMovie.imdbId + 1, NewMovie.screenId), Timeout).isEmpty)
     }
 
     it("should make a reservation") {
-      val reserveMovieResult = Await.result(movieRepository.reserve(FirstMovie.imdbId, FirstMovie.screenId), Timeout)
-      assert(reserveMovieResult == RepositoryInteractionStatus.Success)
+      assert(Await.result(movieRepository.reserveSeat(NewMovie.imdbId, NewMovie.screenId), Timeout) == Status.Success)
 
-      val readMovieResult = Await.result(movieRepository.read(FirstMovie.imdbId, FirstMovie.screenId), Timeout)
-      assert(readMovieResult.isDefined)
-      val res = readMovieResult.get
-      assert(res == FirstMovie.copy(id = res.id, reservedSeats = 1))
+      val readMovieOpt = Await.result(movieRepository.find(NewMovie.imdbId, NewMovie.screenId), Timeout)
+      assert(readMovieOpt.isDefined)
+      val readMovie = readMovieOpt.get
+      assert(readMovie == NewMovie.copy(id = readMovie.id, reservedSeats = 1))
     }
 
     it("should reserve movie with no space for reservation") {
-      Await.result(movieRepository.create(NoMoreReservationMovie), Timeout)
-      assert(Await.result(movieRepository.reserve(NoMoreReservationMovie.imdbId, NoMoreReservationMovie.screenId), Timeout) == RepositoryInteractionStatus.Failure)
+      Await.result(movieRepository.create(MovieNotAvailableForReservation), Timeout)
+      assert(Await.result(movieRepository.reserveSeat(MovieNotAvailableForReservation.imdbId, MovieNotAvailableForReservation.screenId), Timeout) == Status.Failure)
     }
   }
 

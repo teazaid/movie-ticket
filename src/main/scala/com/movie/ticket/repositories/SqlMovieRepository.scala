@@ -1,7 +1,7 @@
 package com.movie.ticket.repositories
 
-import com.movie.ticket.models.RepositoryInteractionStatus._
-import com.movie.ticket.models.{Movie, RepositoryInteractionStatus}
+import com.movie.ticket.models.Status._
+import com.movie.ticket.models.{Movie, Status}
 import scalikejdbc._
 import scalikejdbc.config._
 import scala.concurrent.{ExecutionContext, Future}
@@ -12,7 +12,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class SqlMovieRepository(implicit val executionContext: ExecutionContext) extends MovieRepository {
   init()
 
-  private[repositories] def destroy(): Unit = {
+  private[ticket] def destroy(): Unit = {
     DB autoCommit { implicit session =>
       sql"drop table movies;".stripMargin.execute().apply()
     }
@@ -38,7 +38,7 @@ class SqlMovieRepository(implicit val executionContext: ExecutionContext) extend
     }
   }
 
-  override def reserve(imdbId: String, screenId: String): Future[RepositoryInteractionStatus] = Future {
+  override def reserveSeat(imdbId: String, screenId: String): Future[Status] = Future {
     DB autoCommit { implicit session =>
       sql"""
          UPDATE movies
@@ -46,20 +46,20 @@ class SqlMovieRepository(implicit val executionContext: ExecutionContext) extend
          WHERE imdbId = ${imdbId} and screenId = ${screenId};
         """.execute().apply()
     }
-    RepositoryInteractionStatus.Success
-  }.recover { case _: Throwable => RepositoryInteractionStatus.Failure }
+    Status.Success
+  }.recover { case _: Throwable => Status.Failure }
 
-  override def create(movieToCreate: Movie): Future[RepositoryInteractionStatus] = Future {
+  override def create(movieToCreate: Movie): Future[Status] = Future {
     DB autoCommit { implicit session =>
       sql"""
         insert into movies(imdbId, totalSeats, reservedSeats, screenId, moviesTitle)
            values (${movieToCreate.imdbId}, ${movieToCreate.totalSeats}, ${movieToCreate.reservedSeats}, ${movieToCreate.screenId}, ${movieToCreate.movieTitle});
          """.update().apply()
     }
-    RepositoryInteractionStatus.Success
-  }.recover { case _: Throwable => RepositoryInteractionStatus.Failure }
+    Status.Success
+  }.recover { case _: Throwable => Status.Failure }
 
-  override def read(imdbId: String, screenId: String): Future[Option[Movie]] = Future {
+  override def find(imdbId: String, screenId: String): Future[Option[Movie]] = Future {
     DB readOnly { implicit session =>
       sql"select * from movies where imdbId=${imdbId} and screenId=${screenId}".map(movieMapper).single().apply()
     }

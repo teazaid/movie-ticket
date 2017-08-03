@@ -2,7 +2,7 @@ package com.movie.ticket.http
 
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.http.scaladsl.server.Directives._
-import com.movie.ticket.models.{CreateMovieRequest, Movie, ReserveRequest}
+import com.movie.ticket.models.{RegisterMovieRequest, Movie, ReserveSeatRequest}
 import com.movie.ticket.repositories.MovieRepository
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 
@@ -17,7 +17,7 @@ class MovieRoute(movieRepository: MovieRepository) {
   val route =
     path("register") {
       post {
-        entity(as[CreateMovieRequest]) { request =>
+        entity(as[RegisterMovieRequest]) { request =>
           val registeredMovie = movieRepository.create(Movie(
             None,
             request.imdbId,
@@ -34,8 +34,8 @@ class MovieRoute(movieRepository: MovieRepository) {
       }
     } ~ path("reserve") {
       post {
-        entity(as[ReserveRequest]) { request =>
-          onComplete(movieRepository.reserve(request.imdbId, request.screenId)) { _ =>
+        entity(as[ReserveSeatRequest]) { request =>
+          onComplete(movieRepository.reserveSeat(request.imdbId, request.screenId)) { _ =>
             complete(HttpEntity(ContentTypes.`application/json`, "ok"))
           }
         }
@@ -43,7 +43,7 @@ class MovieRoute(movieRepository: MovieRepository) {
     } ~ path("info") {
       parameters('imdbId, 'screenId) { (imdbId, screenId) =>
         get {
-          onComplete(movieRepository.read(imdbId, screenId)) { movieTry =>
+          onComplete(movieRepository.find(imdbId, screenId)) { movieTry =>
             val movieInfo = movieTry.toOption.flatten.map(_.asJson.noSpaces).getOrElse("Couldn't find the movie")
             complete(HttpEntity(ContentTypes.`application/json`, movieInfo))
           }
