@@ -5,6 +5,7 @@ package com.movie.ticket.models
   */
 case class Movie(id: Option[Long] = None,
                  imdbId: String,
-                 availableSeats: Long,
+                 totalSeats: Long,
+                 reservedSeats: Long,
                  screenId: String,
                  movieTitle: String)
