@@ -2,14 +2,16 @@ package com.movie.ticket.repositories
 
 import com.movie.ticket.models.Status._
 import com.movie.ticket.models.{Movie, Status}
+import com.typesafe.scalalogging.LazyLogging
 import scalikejdbc._
 import scalikejdbc.config._
+
 import scala.concurrent.{ExecutionContext, Future}
 
 /**
   * Created by Alexander on 01.08.2017.
   */
-class SqlMovieRepository(implicit val executionContext: ExecutionContext) extends MovieRepository {
+class SqlMovieRepository(implicit val executionContext: ExecutionContext) extends MovieRepository with LazyLogging {
   init()
 
   private[ticket] def destroy(): Unit = {
@@ -47,7 +49,10 @@ class SqlMovieRepository(implicit val executionContext: ExecutionContext) extend
         """.execute().apply()
     }
     Status.Success
-  }.recover { case _: Throwable => Status.Failure }
+  }.recover { case t: Throwable =>
+    logger.error("Error while reserving a seat: {}, with stacktrace: {}", t.getMessage, t.getStackTraceString)
+    Status.Failure
+  }
 
   override def create(movieToCreate: Movie): Future[Status] = Future {
     DB autoCommit { implicit session =>
@@ -57,13 +62,19 @@ class SqlMovieRepository(implicit val executionContext: ExecutionContext) extend
          """.update().apply()
     }
     Status.Success
-  }.recover { case _: Throwable => Status.Failure }
+  }.recover { case t: Throwable =>
+    logger.error("Error while creating a movie: {}, with stacktrace: {}", t.getMessage, t.getStackTraceString)
+    Status.Failure
+  }
 
   override def find(imdbId: String, screenId: String): Future[Option[Movie]] = Future {
     DB readOnly { implicit session =>
       sql"select * from movies where imdbId=${imdbId} and screenId=${screenId}".map(movieMapper).single().apply()
     }
-  }.recover { case _: Throwable => None }
+  }.recover { case t: Throwable =>
+    logger.error("Error while searching for a movie: {}, with stacktrace: {}", t.getMessage, t.getStackTraceString)
+    None
+  }
 
   private val movieMapper: WrappedResultSet => Movie = {
     rs: WrappedResultSet =>

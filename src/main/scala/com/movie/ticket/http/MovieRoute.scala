@@ -2,7 +2,7 @@ package com.movie.ticket.http
 
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.http.scaladsl.server.Directives._
-import com.movie.ticket.models.{RegisterMovieRequest, Movie, ReserveSeatRequest}
+import com.movie.ticket.models.{Movie, MovieDto, RegisterMovieRequest, ReserveSeatRequest}
 import com.movie.ticket.repositories.MovieRepository
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 
@@ -24,7 +24,7 @@ class MovieRoute(movieRepository: MovieRepository) {
             request.availableSeats,
             0,
             request.screenId,
-            request.movieTitle
+            request.movieTitle.getOrElse("")
           ))
 
           onComplete(registeredMovie) { _ =>
@@ -44,7 +44,15 @@ class MovieRoute(movieRepository: MovieRepository) {
       parameters('imdbId, 'screenId) { (imdbId, screenId) =>
         get {
           onComplete(movieRepository.find(imdbId, screenId)) { movieTry =>
-            val movieInfo = movieTry.toOption.flatten.map(_.asJson.noSpaces).getOrElse("Couldn't find the movie")
+            val movieInfo = movieTry.toOption.flatten.map{ movie =>
+              MovieDto(
+                movie.imdbId,
+                movie.totalSeats -  movie.reservedSeats,
+                movie.reservedSeats,
+                movie.screenId,
+                movie.movieTitle
+              ).asJson.noSpaces
+            }.getOrElse("Couldn't find the movie")
             complete(HttpEntity(ContentTypes.`application/json`, movieInfo))
           }
         }

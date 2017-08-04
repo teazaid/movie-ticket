@@ -9,6 +9,8 @@ val AkkaCirceVersion = "1.17.0"
 val AkkaHttpVersion = "10.0.9"
 val H2Version = "1.4.196"
 val ScalikeJdbcVersion = "3.0.2"
+val LogbackVersion = "1.2.3"
+val ScalaLogginVersion = "3.7.2"
 
 libraryDependencies ++= List(
   "de.heikoseeberger" %% "akka-http-circe" % AkkaCirceVersion,
@@ -20,6 +22,8 @@ libraryDependencies ++= List(
   "org.scalatest" % "scalatest_2.11" % "3.2.0-SNAP7" % "test",
   "com.h2database" % "h2" % H2Version,
   "org.scalikejdbc" % "scalikejdbc_2.11" % ScalikeJdbcVersion,
+  "ch.qos.logback" % "logback-classic" % LogbackVersion,
+  "com.typesafe.scala-logging" %% "scala-logging" % ScalaLogginVersion,
   "com.typesafe.akka" %% "akka-http-testkit" % AkkaHttpVersion % "test"
 )
 

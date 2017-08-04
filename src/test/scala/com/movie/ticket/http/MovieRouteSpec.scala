@@ -20,7 +20,7 @@ class MovieRouteSpec extends WordSpec with Matchers with ScalatestRouteTest with
 
   "MovieRoute" should {
     "register new movie" in {
-      val registerRequest = ByteString(RegisterMovieRequest("i17", 10, "m16", "movieTitle").asJson.noSpaces)
+      val registerRequest = ByteString(RegisterMovieRequest("i17", 10, "m16", Some("movieTitle")).asJson.noSpaces)
 
       Post("/register",
         HttpEntity(MediaTypes.`application/json`, registerRequest)) ~> route ~> check {
@@ -43,7 +43,7 @@ class MovieRouteSpec extends WordSpec with Matchers with ScalatestRouteTest with
       Get("/info?imdbId=i17&screenId=m16") ~> route ~> check {
         status.intValue() shouldEqual 200
         responseAs[String] shouldEqual 
-          """{"id":1,"imdbId":"i17","totalSeats":10,"reservedSeats":1,"screenId":"m16","movieTitle":"movieTitle"}"""
+          """{"imdbId":"i17","availableSeats":9,"reservedSeats":1,"screenId":"m16","movieTitle":"movieTitle"}"""
       }
     }
 

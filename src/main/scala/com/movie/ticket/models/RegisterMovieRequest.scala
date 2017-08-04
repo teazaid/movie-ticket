@@ -6,6 +6,6 @@ package com.movie.ticket.models
 case class RegisterMovieRequest(imdbId: String,
                                 availableSeats: Long,
                                 screenId: String,
-                                movieTitle: String)
+                                movieTitle: Option[String])
 
 
