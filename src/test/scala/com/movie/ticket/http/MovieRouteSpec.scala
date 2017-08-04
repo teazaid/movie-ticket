@@ -1,6 +1,7 @@
 package com.movie.ticket.http
 
 import akka.http.scaladsl.model.{HttpEntity, MediaTypes}
+import akka.http.scaladsl.server.ValidationRejection
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.util.ByteString
 import com.movie.ticket.models.{RegisterMovieRequest, ReserveSeatRequest}
@@ -29,6 +30,15 @@ class MovieRouteSpec extends WordSpec with Matchers with ScalatestRouteTest with
       }
     }
 
+    "register already registered movie" in {
+      val registerRequest = ByteString(RegisterMovieRequest("i17", 10, "m16", Some("movieTitle")).asJson.noSpaces)
+
+      Post("/register",
+        HttpEntity(MediaTypes.`application/json`, registerRequest)) ~> route ~> check {
+        rejection  shouldEqual ValidationRejection("Failed to register a movie")
+      }
+    }
+
     "reserve a seat" in {
       val reserveSeat = ByteString(ReserveSeatRequest("i17", "m16").asJson.noSpaces)
 
@@ -36,6 +46,23 @@ class MovieRouteSpec extends WordSpec with Matchers with ScalatestRouteTest with
         HttpEntity(MediaTypes.`application/json`, reserveSeat)) ~> route ~> check {
         status.intValue() shouldEqual 200
         responseAs[String] shouldEqual ok
+      }
+    }
+
+    "reserve a seat when no seats available" in {
+      val registerRequest = ByteString(RegisterMovieRequest("i18", 0, "m16", Some("movieTitle")).asJson.noSpaces)
+
+      Post("/register",
+        HttpEntity(MediaTypes.`application/json`, registerRequest)) ~> route ~> check {
+        status.intValue() shouldEqual 200
+        responseAs[String] shouldEqual ok
+      }
+
+      val reserveSeat = ByteString(ReserveSeatRequest("i18", "m16").asJson.noSpaces)
+
+      Post("/reserve",
+        HttpEntity(MediaTypes.`application/json`, reserveSeat)) ~> route ~> check {
+        rejection  shouldEqual ValidationRejection("Failed to make a reservation")
       }
     }
 

@@ -41,14 +41,15 @@ class SqlMovieRepository(implicit val executionContext: ExecutionContext) extend
   }
 
   override def reserveSeat(imdbId: String, screenId: String): Future[Status] = Future {
-    DB autoCommit { implicit session =>
+    val successfullyReservedSeats = DB autoCommit { implicit session =>
       sql"""
          UPDATE movies
          SET reservedSeats = (select reservedSeats + 1 from movies where totalSeats - reservedSeats > 0 and imdbId = ${imdbId} and screenId = ${screenId})
          WHERE imdbId = ${imdbId} and screenId = ${screenId};
-        """.execute().apply()
+        """.update().apply()
+
     }
-    Status.Success
+    if(successfullyReservedSeats == 1) Status.Success else Status.Failure
   }.recover { case t: Throwable =>
     logger.error("Error while reserving a seat: {}, with stacktrace: {}", t.getMessage, t.getStackTraceString)
     Status.Failure
